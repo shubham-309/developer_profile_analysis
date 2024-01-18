@@ -74,14 +74,6 @@ def get_file_content(file_url):
         return None
     
 
-owner = "shubham-309"
-repo = "AI_RESUME_SCREENING_SYSTEM"
-token = "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"
-
-# Replace 'branch' with the desired branch name
-branch = "master"
-
-file_contents = get_commit_file_contents(owner, repo, token, branch)
 
 content_variables = {}
 for file_path, content in file_contents.items():

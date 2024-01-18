@@ -44,7 +44,7 @@ def get_pull_requests_count(owner, repo, token):
     pull_requests = response.json()
     return len(pull_requests)
 
-def get_commit_file_contents(owner, repo, token, branch='master'):
+def get_commit_file_contents(owner, repo, token, branch):
     base_url = "https://api.github.com"
     code_url = f"{base_url}/repos/{owner}/{repo}/commits/{branch}"
     headers = {"Authorization": f"token {token}"}

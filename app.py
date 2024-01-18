@@ -24,8 +24,6 @@ if submit and owner and repo and branch and token:
     st.write("Total Pull Requests by "+ owner + " into " + repo +" is "+ str(count_pull_requests)+".")
 
 
-    file_contents = get_commit_file_contents(owner, repo, token, branch)
-
     for file_path, content in content_variables.items():
         st.write("File Name : "+ file_path)
         st.code(content)

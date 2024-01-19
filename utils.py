@@ -1,7 +1,9 @@
 import requests
 import datetime
-import streamlit as st
 from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def get_commits_count(owner, repo, token):
     base_url = "https://api.github.com"
@@ -44,27 +46,38 @@ def get_pull_requests_count(owner, repo, token):
     pull_requests = response.json()
     return len(pull_requests)
 
-def get_commit_file_contents(owner, repo, token, branch='master'):
+def get_commit_file_contents(owner, repo, token, branch):
     base_url = "https://api.github.com"
-    code_url = f"{base_url}/repos/{owner}/{repo}/commits/{branch}"
+    commits_url = f"{base_url}/repos/{owner}/{repo}/commits?sha={branch}"
     headers = {"Authorization": f"token {token}"}
 
-    response = requests.get(code_url, headers=headers)
+    response = requests.get(commits_url, headers=headers)
     response.raise_for_status()
 
-    commit_info = response.json()
-    modified_files = commit_info.get('files', {})
+    commits_info = response.json()
 
     file_contents = {}
-    for file_info in modified_files:
-        file_path = file_info.get('filename')
-        file_url = file_info.get('raw_url')
-        file_content = get_file_content(file_url)
+    for commit_info in commits_info:
+        commit_sha = commit_info.get('sha')
+        commit_files_url = f"{base_url}/repos/{owner}/{repo}/commits/{commit_sha}"
+        commit_response = requests.get(commit_files_url, headers=headers)
+        commit_response.raise_for_status()
 
-        if file_content is not None:
-            file_contents[file_path] = file_content
+        commit_data = commit_response.json()
+        modified_files = commit_data.get('files', {})
+
+        for file_info in modified_files:
+            file_path = file_info.get('filename')
+            file_url = file_info.get('raw_url')
+            file_content = get_file_content(file_url)
+
+            if file_content is not None:
+                file_contents[file_path] = file_content
 
     return file_contents
+
+
+
 
 def get_file_content(file_url):
     response = requests.get(file_url)
@@ -74,20 +87,8 @@ def get_file_content(file_url):
         return None
     
 
-owner = "shubham-309"
-repo = "AI_RESUME_SCREENING_SYSTEM"
-token = "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"
 
-# Replace 'branch' with the desired branch name
-branch = "master"
-
-file_contents = get_commit_file_contents(owner, repo, token, branch)
-
-content_variables = {}
-for file_path, content in file_contents.items():
-    content_variables[file_path] = content
-
-def generate(commit, pr):
+def generate(commit, pr, content_variables):
     llm_g = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.9)
     Developer_Performance_Analysis_Prompt = """
     Task: Evaluate the developer's performance by analyzing code quality and comments quality in their recent commits.

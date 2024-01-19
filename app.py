@@ -3,7 +3,7 @@ from utils import *
 from dotenv import load_dotenv
 
 load_dotenv()
-
+ 
 st.set_page_config(page_title="Developer Performance Analysis APP")
 st.title(" Analysing your Developer's Performance 🤖 📑")
 st.subheader("Helping you with your work 📝")
@@ -19,21 +19,15 @@ if submit and owner and repo and branch and token:
 
     count_commits = get_commits_count(owner, repo, token)
     count_pull_requests = get_pull_requests_count(owner, repo, token)
+    file_contents = get_commit_file_contents(owner, repo, token, branch)
 
     st.write("Total Commits by "+ owner + " into " + repo +" is "+ str(count_commits)+".")
     st.write("Total Pull Requests by "+ owner + " into " + repo +" is "+ str(count_pull_requests)+".")
 
-
-    file_contents = get_commit_file_contents(owner, repo, token, branch)
-
-
-    content_variables = {}
+    # Display file contents
     for file_path, content in file_contents.items():
-        content_variables[file_path] = content
-
-    for file_path, content in content_variables.items():
         st.write("File Name : "+ file_path)
         st.code(content)
 
-    response = generate(count_commits, count_pull_requests, content_variables)
+    response = generate(count_commits, count_pull_requests, content)
     st.write(response)

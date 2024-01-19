@@ -21,8 +21,14 @@ if submit and owner and repo and branch and token:
     count_pull_requests = get_pull_requests_count(owner, repo, token)
     file_contents = get_commit_file_contents(owner, repo, token, branch)
 
-    st.write("Total Commits by "+ owner + " into " + repo +" is "+ str(count_commits)+".")
-    st.write("Total Pull Requests by "+ owner + " into " + repo +" is "+ str(count_pull_requests)+".")
+    if count_commits == 0:
+        st.warning("No commit found in last 7 days.")
+    else:
+        st.write("Total Commits by "+ owner + " into " + repo +" is "+ str(count_commits)+".")
+    if count_pull_requests == 0:
+        st.warning("No Pull Requests found in last 7 days.")
+    else:    
+        st.write("Total Pull Requests by "+ owner + " into " + repo +" is "+ str(count_pull_requests)+".")
 
     # Display file contents
     for file_path, content in file_contents.items():

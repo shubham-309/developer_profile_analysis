@@ -4,14 +4,15 @@ from utils import *
 from langchain.docstore.document import Document
 from langchain.callbacks import get_openai_callback
 import pandas as pd
+import os
 import time
 
 load_dotenv()
 
 st.set_page_config("Impressico's Developer Performance Analysis Tool", page_icon="https://media.licdn.com/dms/image/C4E0BAQErzHJr7lA-uQ/company-logo_200_200/0/1631356294168?e=1714608000&v=beta&t=lbeplkUBiGsPGvObCIUmLk5qRA9X8NvoJGHWBZEC6so", layout="wide")
 
-api_token = "ATATT3xFfGF0p4hZOJ6rJ-sP8ZTLOBicXD07BFeSU47DleIhCkxScxDummtIuEYP6A3NlKfPwzFwG6YMrljTqbSx_58Xs2GfC2dCxI510o3sMK9Rjcf3Q3MflYOA9FZLdZhn4V5mNiilCwHCvNfr9tFHcMII36kcsxkDKBn6liW1T6zTkEZa_8M=6882AEE7"
-token = "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"
+api_token = os.getenv("JIRA_TOKEN")
+token = token = os.getenv('GITHU8_API_TOKEN')
 
 st.title(" Developer Performance Analysis 🥇 ")
 st.subheader("Analysing your Developer's Performance 🤖")
@@ -30,50 +31,7 @@ with tabs[0]:
 
     if submit and owner and repo and token:
         with get_openai_callback() as cb:
-        # responses=[]
-        # count_commits = get_commits_count(owner, repo, username, token)
-        # count_pull_requests = get_pull_requests_count(owner, repo, username, token)
-        # file_contents = get_commit_file_contents(owner, repo, username, token, branch)
-        # pull_request_info = get_pull_request_comments_by_user(owner, repo, username, token)
-        # files_info = get_last_commit_file_contents(owner, repo, username, token, branch)
-
-        # for item in pull_request_info:
-        #     st.write(f"Pull Request #{item['pull_request_number']} - Title: {item['pull_request_title']}")
-        #     st.write(f"Comment: {item['comment_body']}")
-
-        # st.header("Commits and Pull Requests")
-        # if count_commits == 0:
-        #     st.warning("No commit found in the last 7 days. ⚠️ ")
-        # else:
-        #     st.write("Total Commits: ", str(count_commits))
-        # if count_pull_requests == 0:
-        #     st.warning("No Pull Requests found in the last 7 days. ⚠️ ")
-        # else:
-        #     st.write("Total Pull Requests: ", str(count_pull_requests))
-        # if not files_info:
-        #     st.warning("No code committed by " + username)
-        # else:
-        #     st.header("Committed File Contents")
-        #     with st.expander("Code"):
-        #         if files_info:
-        #             for file_info in files_info:
-        #                 st.write(f"File: {file_info['file_path']}")
-        #                 st.write(f"Additions: {file_info['additions']}")
-        #                 st.write(f"Deletions: {file_info['deletions']}")
-        #                 st.write("Content:")
-        #                 st.write(file_info['content'])
-        #                 response = generate(count_commits, count_pull_requests, file_info['content'])
-        #                 responses.append(response)
-
-        #         else:
-        #             st.write("No modified files found in the last commit.")
-        #     st.write(response)
-        #     st.write(responses)
-        #     st.header("Detailed Analysis for " + str(username))
-        #     st.write(response)
-
             analysis_results = []
-
 
             changed_files_info = get_user_changed_files_in_commits(owner, repo, username, token)
             user_pull_requests = get_user_pull_requests(owner, repo, username, token)

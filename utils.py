@@ -76,18 +76,20 @@ def get_user_pull_requests(owner, repo, username, token):
 
     headers = {"Authorization": f"token {token}"}
 
+    # Calculate the date 1 week ago
     one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    # Get user pull requests
     pulls_params = {
+        "state": "all",
         "sort": "updated",
         "direction": "desc",
         "since": one_week_ago,
-        "creator": username
+        "creator": username  # Filter by the creator (user)
     }
 
     pulls_response = requests.get(pulls_url, headers=headers, params=pulls_params)
     pulls_response.raise_for_status()
-
     pulls_data = pulls_response.json()
 
     user_pull_requests = []
@@ -99,6 +101,7 @@ def get_user_pull_requests(owner, repo, username, token):
             'comments': []
         }
 
+        # Get comments for the pull request
         comments_url = f"{base_url}/repos/{owner}/{repo}/issues/{pull_request['number']}/comments"
         comments_response = requests.get(comments_url, headers=headers)
         comments_response.raise_for_status()
@@ -114,7 +117,6 @@ def get_user_pull_requests(owner, repo, username, token):
         user_pull_requests.append(pull_request_details)
 
     return user_pull_requests
-
 
 def get_summary(doc):
     llm_g = ChatGoogleGenerativeAI(model="gemini-pro")
@@ -135,9 +137,9 @@ def generate(filename, content_variables):
     4. Include a detailed summary of the analysis, highlighting strengths and areas for improvement.
     5. If there are specific criteria or coding standards to adhere to, mention them in your analysis.
 
-    input:
-    file name - {filename}
-    code - {code}
+    Input:
+    File Name: {filename}
+    Code : {code}
 
     Output Structure:
     Developer Performance Rating: [1-5 stars (display ⭐)]
@@ -150,9 +152,8 @@ def generate(filename, content_variables):
     - Suggest specific actions to enhance code quality.
     - Provide guidance on adopting best practices.
 
-    Note: The rating should reflect the overall code quality, and the summary should offer constructive feedback for improvement also don't print any code in o/p.
+    Note: The rating should reflect the overall code quality, and the summary should offer constructive feedback for improvement. Please do not include any code or code suggestion in the output.
     """
-
     Developer_Performance_Analysis_Prompt = Developer_Performance_Analysis_Prompt.format(code=content_variables,
                                                                                          filename=filename)
     response = llm_g.invoke(Developer_Performance_Analysis_Prompt)
@@ -177,7 +178,7 @@ def generateres(user, comment):
     comment - {comment}
 
     Output Structure:
-    Developer Performance Rating: [1-5 (display stars)]
+    Developer Performance Rating: [1-5 (display ⭐)]
     
 
     Note: The rating should reflect the overall comment quality.
@@ -231,55 +232,6 @@ def get_jira_issue_info(url, issue_key, email, api_token):
     else:
         print(f"Error: {response.status_code}, {response.text}")
         return None
-
-
-def get_last_commit_file_contents(owner, repo, username, token, branch):
-    base_url = "https://api.github.com"
-    commits_url = f"{base_url}/repos/{owner}/{repo}/commits?sha={branch}&author={username}&per_page=1"
-    headers = {"Authorization": f"token {token}"}
-
-    response = requests.get(commits_url, headers=headers)
-    response.raise_for_status()
-
-    commits_info = response.json()
-
-    if not commits_info:
-        print("No commits found.")
-        return
-
-    commit_info = commits_info[0]  # Assuming there is at least one commit
-
-    commit_sha = commit_info.get('sha')
-    commit_files_url = f"{base_url}/repos/{owner}/{repo}/commits/{commit_sha}"
-    commit_response = requests.get(commit_files_url, headers=headers)
-    commit_response.raise_for_status()
-
-    commit_data = commit_response.json()
-
-    author = commit_data.get('author')
-    if author and 'login' in author:
-        author_login = author['login']
-        if author_login == username:
-            modified_files = commit_data.get('files', [])
-
-            files_info = []
-            for file_info in modified_files:
-                file_path = file_info.get('filename')
-                additions = file_info.get('additions', 0)
-                deletions = file_info.get('deletions', 0)
-                file_url = file_info.get('raw_url')
-                file_content = get_file_content(file_url)
-
-                files_info.append({
-                    'file_path': file_path,
-                    'additions': additions,
-                    'deletions': deletions,
-                    'content': file_content
-                })
-
-            return files_info
-
-    return None
 
 def get_file_content(file_url):
     response = requests.get(file_url)

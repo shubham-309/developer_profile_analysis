@@ -12,7 +12,7 @@ load_dotenv()
 st.set_page_config("Impressico's Developer Performance Analysis Tool", page_icon="https://media.licdn.com/dms/image/C4E0BAQErzHJr7lA-uQ/company-logo_200_200/0/1631356294168?e=1714608000&v=beta&t=lbeplkUBiGsPGvObCIUmLk5qRA9X8NvoJGHWBZEC6so", layout="wide")
 
 api_token = os.getenv("JIRA_TOKEN")
-token = token = os.getenv('GITHU8_API_TOKEN')
+token = os.getenv('GITHUB_API_TOKEN')
 
 st.title(" Developer Performance Analysis 🥇 ")
 st.subheader("Analysing your Developer's Performance 🤖")
@@ -36,6 +36,7 @@ with tabs[0]:
             changed_files_info = get_user_changed_files_in_commits(owner, repo, username, token)
             user_pull_requests = get_user_pull_requests(owner, repo, username, token)
             st.header("\nUser Commits in the Last Week:")
+            st.toast("Getting Commit Info")
 
             commit_analysis = None
             pr_analysis = None
@@ -58,7 +59,7 @@ with tabs[0]:
                                 time.sleep(10)
 
                             else:
-                                pass
+                                st.warning("No file changed in this commit 🚨")
                 else:
                     st.warning("No changed files in this commit.") 
 
@@ -67,6 +68,8 @@ with tabs[0]:
                 'sha': commit_info['sha'],
                 'analysis': commit_analysis
                 })
+            
+            st.toast("Getting Pull request info")
 
             st.header("\nUser Pull Requests in the Last Week:")
             for pull_request in user_pull_requests:
@@ -92,7 +95,9 @@ with tabs[0]:
                         })
             
             all_analyses = []
-                        
+
+            st.toast("Doing an analysis on your code")
+                    
             st.header("Developer Performance Analysis Results:")
             for result in analysis_results:
                 if result['type'] == 'commit':
@@ -110,7 +115,8 @@ with tabs[0]:
             overall_summary = get_summary(doc)
             
             st.header("\nOverall Summary:")
-            st.write(overall_summary)  
+            st.write(overall_summary)
+            st.toast("Here is your summary")  
 
 
             data = [line.split(": ") for line in str(cb).strip().split("\n")]

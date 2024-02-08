@@ -1,14 +1,13 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
-from dotenv import load_dotenv
 import requests
-import base64
-import os
 from datetime import datetime, timedelta
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.summarize import load_summarize_chain
+from dotenv import load_dotenv
+import base64
 
 load_dotenv()
 
-def get_user_changed_files_in_commits(owner, repo, username, token):
+def fetch_user_changed_files_in_commits(owner, repo, username, token):
     print(f"Fetching changed files for {username} in {owner}/{repo}")
     base_url = "https://api.github.com"
     commits_url = f"{base_url}/repos/{owner}/{repo}/commits"
@@ -48,7 +47,8 @@ def get_user_changed_files_in_commits(owner, repo, username, token):
                 file_details = {
                     'status': file_info['status'],
                     'path': file_info['filename'],
-                    'content': ""
+                    'content': "",
+                    'patch': file_info['patch']
                 }
 
                 raw_url = f"{base_url}/repos/{owner}/{repo}/contents/{file_info['filename']}?ref={commit['sha']}"
@@ -69,23 +69,21 @@ def get_user_changed_files_in_commits(owner, repo, username, token):
     return user_changed_files
 
 
-def get_user_pull_requests(owner, repo, username, token):
+def fetch_user_pull_requests(owner, repo, username, token):
     print(f"Fetching pull requests for {username} in {owner}/{repo}")
     base_url = "https://api.github.com"
     pulls_url = f"{base_url}/repos/{owner}/{repo}/pulls"
 
     headers = {"Authorization": f"token {token}"}
 
-    # Calculate the date 1 week ago
     one_week_ago = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # Get user pull requests
     pulls_params = {
         "state": "all",
         "sort": "updated",
         "direction": "desc",
         "since": one_week_ago,
-        "creator": username  # Filter by the creator (user)
+        "creator": username
     }
 
     pulls_response = requests.get(pulls_url, headers=headers, params=pulls_params)
@@ -101,7 +99,6 @@ def get_user_pull_requests(owner, repo, username, token):
             'comments': []
         }
 
-        # Get comments for the pull request
         comments_url = f"{base_url}/repos/{owner}/{repo}/issues/{pull_request['number']}/comments"
         comments_response = requests.get(comments_url, headers=headers)
         comments_response.raise_for_status()
@@ -118,53 +115,50 @@ def get_user_pull_requests(owner, repo, username, token):
 
     return user_pull_requests
 
-def get_summary(doc):
-    llm_g = ChatGoogleGenerativeAI(model="gemini-pro")
-    chain = load_summarize_chain(llm_g, chain_type="stuff")
-    summary = chain.run([doc])
-    return summary
-
-
-def generate(filename, content_variables):
+def generate_developer_performance_analysis(filename, code_content, commit_message):
     llm_g = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.9)
-    Developer_Performance_Analysis_Prompt = """
-    Task: Evaluate the developer's performance by analyzing code quality in their recent commits.
+    prompt = """
+Task: Evaluate the developer's performance by analyzing code quality and commit messages in their recent commits.
 
-    Instructions:
-    1. Retrieve the last few commits made by the developer in the specified repository.
-    2. Assess the code quality, considering factors such as adherence to coding standards, maintainability, and efficiency.
-    3. Provide a rating on a scale of 1 to 5 stars, where 1 represents poor performance and 5 represents excellent performance.
-    4. Include a detailed summary of the analysis, highlighting strengths and areas for improvement.
-    5. If there are specific criteria or coding standards to adhere to, mention them in your analysis.
+Instructions:
+1. Retrieve the last few commits made by the developer in the specified repository.
+2. Assess the code quality, considering factors such as adherence to coding standards, maintainability, and efficiency, based on the provided unified diff/patch file.
+3. Evaluate the clarity and relevance of the commit messages in conveying the changes made.
+4. Provide a rating on a scale of 1 to 5 stars for both code quality and commit message quality, where 1 represents poor performance and 5 represents excellent performance.
+5. Include a detailed summary of the analysis for both aspects, highlighting strengths and areas for improvement.
+6. If there are specific criteria or coding standards to adhere to, mention them in your analysis.
 
-    Input:
-    File Name: {filename}
-    Code : {code}
+Input:
+File Name: {filename}
+Code Changes: {code}
+Commit Message: {commit_message}
 
-    Output Structure:
-    Developer Performance Rating: [1-5 stars (display ⭐)]
-    
-    Summary:
-    - Code Quality Strengths: [Identify strong points]
-    - Areas for Improvement: [Highlight areas that need improvement]
+Output Structure:
+Code Quality Rating: [1-5 stars (only display number of ⭐)]
+Commit Message Quality Rating: [1-5 stars (only display number of ⭐)]
 
-    Recommendations:
-    - Suggest specific actions to enhance code quality.
-    - Provide guidance on adopting best practices.
+Summary:
+- Code Quality Strengths: [Identify strong points]
+- Areas for Improvement in Code Quality: [Highlight areas that need improvement]
+- Commit Message Clarity: [Evaluate how well the commit message conveys changes]
+- Areas for Improvement in Commit Messages: [Highlight areas that need improvement]
 
-    Note: The rating should reflect the overall code quality, and the summary should offer constructive feedback for improvement. Please do not include any code or code suggestion in the output.
-    """
-    Developer_Performance_Analysis_Prompt = Developer_Performance_Analysis_Prompt.format(code=content_variables,
-                                                                                         filename=filename)
-    response = llm_g.invoke(Developer_Performance_Analysis_Prompt)
-    response = response.content
-    performance = response
-    return performance
+Recommendations:
+- Suggest specific actions to enhance code quality.
+- Provide guidance on writing clear and informative commit messages.
+- Offer advice on adopting best practices.
 
+Note: The ratings should reflect the overall code quality and commit message quality, and the summary should offer constructive feedback for improvement.
+Special note: Please do not include or print any code file or code in the output.
+"""
 
-def generateres(user, comment):
+    prompt = prompt.format(code=code_content, filename=filename, commit_message=commit_message)
+    response = llm_g.invoke(prompt)
+    return response.content
+
+def generate_pull_request_analysis(user, comment):
     llm_g = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.9)
-    Pull_Request_Analysis_Prompt = """
+    prompt = """
     Task: Evaluate the developer's performance by analyzing comment quality in their pull requests.
 
     Do an analysis on {user}'s {comment} on an repository and give him an rating from 1-5 based on the comments on Pull request.
@@ -178,20 +172,16 @@ def generateres(user, comment):
     comment - {comment}
 
     Output Structure:
-    Developer Performance Rating: [1-5 (display ⭐)]
+    Developer Performance Rating: [1-5 (only display number of ⭐)]
     
 
     Note: The rating should reflect the overall comment quality.
     """
+    prompt = prompt.format(user=user, comment=comment)
+    response = llm_g.invoke(prompt)
+    return response.content
 
-    Pull_Request_Analysis_Prompt = Pull_Request_Analysis_Prompt.format(user=user, comment=comment)
-    response = llm_g.invoke(Pull_Request_Analysis_Prompt)
-    response = response.content
-    pranalysis = response
-    return pranalysis
-
-
-def get_jira_issue_info(url, issue_key, email, api_token):
+def fetch_jira_issue_info(url, issue_key, email, api_token):
     url = f"{url}/rest/api/2/issue/{issue_key}"
 
     headers = {
@@ -212,12 +202,9 @@ def get_jira_issue_info(url, issue_key, email, api_token):
         creator_name = data['fields']['creator']['displayName']
 
         assignee_info = data['fields']['assignee']
-        if assignee_info:
-            assignee_name = assignee_info['displayName']
-        else:
-            assignee_name = "Unassigned"
+        assignee_name = assignee_info['displayName'] if assignee_info else "Unassigned"
 
-        result = {
+        return {
             "Issue Key": issue_key,
             "Issue Type": issue_type,
             "Project": project_name,
@@ -227,15 +214,16 @@ def get_jira_issue_info(url, issue_key, email, api_token):
             "Creator": creator_name,
             "Assignee": assignee_name,
         }
-
-        return result
     else:
         print(f"Error: {response.status_code}, {response.text}")
         return None
 
-def get_file_content(file_url):
+def fetch_file_content(file_url):
     response = requests.get(file_url)
-    if response.status_code == 200:
-        return response.text
-    else:
-        return None
+    return response.text if response.status_code == 200 else None
+
+def get_summary(doc):
+    llm_g = ChatGoogleGenerativeAI(model="gemini-pro")
+    chain = load_summarize_chain(llm_g, chain_type="stuff")
+    summary = chain.run([doc])
+    return summary

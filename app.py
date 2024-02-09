@@ -30,80 +30,85 @@ def display_github_analysis():
     submit = st.button("Analyze")
 
     if submit and owner and repo and token:
-        with get_openai_callback() as cb:
-            analysis_results = []
-            changed_files_info = fetch_user_changed_files_in_commits(owner, repo, username, token)
-            user_pull_requests = fetch_user_pull_requests(owner, repo, username, token)
+        with st.spinner("In progress..."):
+            with get_openai_callback() as cb:
+                analysis_results = []
+                changed_files_info = fetch_user_changed_files_in_commits(owner, repo, username, token)
+                user_pull_requests = fetch_user_pull_requests(owner, repo, username, token)
 
-            for commit_info in changed_files_info:
-                st.write(f"\nCommit SHA: {commit_info['sha']}")
-                st.write(f"Commit Message: {commit_info['message']}")
+                for commit_info in changed_files_info:
+                    st.toast(":white[Fetching commit detail]")
+                    st.write(f"\nCommit SHA: {commit_info['sha']}")
+                    st.write(f"Commit Message: {commit_info['message']}")
 
-                if commit_info['changed_files']:
-                    st.subheader("\nChanged Files:")
-                    for file_info in commit_info['changed_files']:
-                        with st.expander("Code"):
-                            # st.write(f"\nFile Status: {file_info['patch']}")
-                            st.write(f"\nFile Status: {file_info['status']}")
-                            st.write(f"File Path: {file_info['path']}")
-                            if file_info['content']:
-                                st.write("File Content:")
-                                st.code(file_info['patch'])
-                                commit_analysis = generate_developer_performance_analysis(file_info['path'], file_info['patch'], commit_info['message'])
-                                time.sleep(10)
-                            else:
-                                st.warning("No file changed in this commit 🚨")
-                else:
-                    st.warning("No changed files in this commit.")
-
-                analysis_results.append({
-                    'type': 'commit',
-                    'sha': commit_info['sha'],
-                    'analysis': commit_analysis
-                })
-            
-            st.header("Pull Requests Info from last week")
-            for pull_request in user_pull_requests:
-                with st.expander("Pull Request Info"):
-                    st.write(f"\nPull Request Number: {pull_request['number']}")
-                    st.write(f"Pull Request Title: {pull_request['title']}")
-                    st.write(f"State: {pull_request['state']}")
-
-                    if pull_request['comments']:
-                        st.write(f"\nComments:")
-                        for comment in pull_request['comments']:
-                            st.write(f"Comment by {comment['user']}: {comment['body']}")
-                            pr_analysis = generate_pull_request_analysis(comment['user'], comment['body'])
-                            time.sleep(10)
+                    if commit_info['changed_files']:
+                        st.subheader("\nChanged Files:")
+                        for file_info in commit_info['changed_files']:
+                            with st.expander("Code"):
+                                st.write(f"\nFile Status: {file_info['status']}")
+                                st.write(f"File Path: {file_info['path']}")
+                                if file_info['content']:
+                                    st.write("File Content:")
+                                    st.code(file_info['patch'])
+                                    commit_analysis = generate_developer_performance_analysis(file_info['path'], file_info['patch'], commit_info['message'])
+                                    time.sleep(10)
+                                else:
+                                    st.warning("No content found in this file")
                     else:
-                        st.warning("No comments on this pull request.")
+                        st.toast(":red[No Commit info found]")
+                        st.warning("No changed files in this commit.")
 
                     analysis_results.append({
-                        'type': 'pull_request',
-                        'number': pull_request['number'],
-                        'analysis': pr_analysis
+                        'type': 'commit',
+                        'sha': commit_info['sha'],
+                        'analysis': commit_analysis
                     })
+                
+                st.header("Pull Requests Info from last week")
+                for pull_request in user_pull_requests:
+                    st.toast(":white[Pull Request info fetched]")
+                    with st.expander("Pull Request Info"):
+                        st.write(f"\nPull Request Number: {pull_request['number']}")
+                        st.write(f"Pull Request Title: {pull_request['title']}")
+                        st.write(f"State: {pull_request['state']}")
 
-            all_analyses = []
-            for result in analysis_results:
-                if result['type'] == 'commit':
-                    st.subheader(f"Commit SHA: {result['sha']}")
-                elif result['type'] == 'pull_request':
-                    st.subheader(f"Pull Request Number: {result['number']}")
-                st.write(result['analysis'])
-                all_analyses.append(str(result['analysis']))
+                        if pull_request['comments']:
+                            st.write(f"\nComments:")
+                            for comment in pull_request['comments']:
+                                st.write(f"Comment by {comment['user']}: {comment['body']}")
+                                pr_analysis = generate_pull_request_analysis(comment['user'], comment['body'])
+                                time.sleep(10)
+                        else:
+                            st.warning("No comments on this pull request.")
 
-            all_analyses_content = "\n".join(all_analyses)
-            doc = Document(page_content=all_analyses_content)
-            overall_summary = get_summary(doc)
+                        analysis_results.append({
+                            'type': 'pull_request',
+                            'number': pull_request['number'],
+                            'analysis': pr_analysis
+                        })
 
-            st.header("\nOverall Summary:")
-            st.write(overall_summary)
+                all_analyses = []
+                st.toast(":white[Creating Analysis for you]")
+                for result in analysis_results:
+                    if result['type'] == 'commit':
+                        st.subheader(f"Commit SHA: {result['sha']}")
+                    elif result['type'] == 'pull_request':
+                        st.subheader(f"Pull Request Number: {result['number']}")
+                    st.write(result['analysis'])
+                    all_analyses.append(str(result['analysis']))
 
-            st.header("Cost")
-            data = [line.split(": ") for line in str(cb).strip().split("\n")]
-            df = pd.DataFrame(data, columns=["Metric", "Value"])
-            st.table(df)
+                all_analyses_content = "\n".join(all_analyses)
+                doc = Document(page_content=all_analyses_content)
+                overall_summary = get_summary(doc)
+
+                st.toast(":white[Overall Summary]")
+                st.header("\nOverall Summary:")
+                st.write(overall_summary)
+
+                st.header("Cost")
+                data = [line.split(": ") for line in str(cb).strip().split("\n")]
+                df = pd.DataFrame(data, columns=["Metric", "Value"])
+                st.table(df)
 
 def display_jira_issue_details():
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Jira_Logo.svg/2560px-Jira_Logo.svg.png", width=100, use_column_width=40)

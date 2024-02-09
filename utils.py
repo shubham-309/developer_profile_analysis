@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.summarize import load_summarize_chain
 from dotenv import load_dotenv
+from langchain.prompts import PromptTemplate
 import base64
 
 load_dotenv()
@@ -118,40 +119,40 @@ def fetch_user_pull_requests(owner, repo, username, token):
 def generate_developer_performance_analysis(filename, code_content, commit_message):
     llm_g = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.9)
     prompt = """
-Task: Evaluate the developer's performance by analyzing code quality and commit messages in their recent commits.
+        Task: Evaluate the developer's performance by analyzing code quality and commit messages in their recent commits.
 
-Instructions:
-1. Retrieve the last few commits made by the developer in the specified repository.
-2. Assess the code quality, considering factors such as adherence to coding standards, maintainability, and efficiency, based on the provided unified diff/patch file.
-3. Evaluate the clarity and relevance of the commit messages in conveying the changes made.
-4. Provide a rating on a scale of 1 to 5 stars for both code quality and commit message quality, where 1 represents poor performance and 5 represents excellent performance.
-5. Include a detailed summary of the analysis for both aspects, highlighting strengths and areas for improvement.
-6. If there are specific criteria or coding standards to adhere to, mention them in your analysis.
+        Instructions:
+        1. Retrieve the last few commits made by the developer in the specified repository.
+        2. Assess the code quality, considering factors such as adherence to coding standards, maintainability, and efficiency, based on the provided unified diff/patch file.
+        3. Evaluate the clarity and relevance of the commit messages in conveying the changes made.
+        4. Provide a rating on a scale of 1 to 5 stars for both code quality and commit message quality, where 1 represents poor performance and 5 represents excellent performance.
+        5. Include a detailed summary of the analysis for both aspects, highlighting strengths and areas for improvement.
+        6. If there are specific criteria or coding standards to adhere to, mention them in your analysis.
 
-Input:
-File Name: {filename}
-Code Changes: {code}
-Commit Message: {commit_message}
+        Input:
+        File Name: {filename}
+        Code Changes: {code}
+        Commit Message: {commit_message}
 
-Output Structure:
-Code Quality Rating: [1-5 stars (only display number of ⭐)]
-Commit Message Quality Rating: [1-5 stars (only display number of ⭐)]
+        Output Structure:
+        Code Quality Rating: [1-5 stars (only display number of ⭐)]
+        Commit Message Quality Rating: [1-5 stars (only display number of ⭐)]
 
-Summary:
-- Code Quality Strengths: [Identify strong points]
-- Areas for Improvement in Code Quality: [Highlight areas that need improvement]
-- Commit Message Clarity: [Evaluate how well the commit message conveys changes]
-- Areas for Improvement in Commit Messages: [Highlight areas that need improvement]
+        Summary:
+        - Code Quality Strengths: [Identify strong points]
+        - Areas for Improvement in Code Quality: [Highlight areas that need improvement]
+        - Commit Message Clarity: [Evaluate how well the commit message conveys changes]
+        - Areas for Improvement in Commit Messages: [Highlight areas that need improvement]
 
-Recommendations:
-- Suggest specific actions to enhance code quality.
-- Provide guidance on writing clear and informative commit messages.
-- Offer advice on adopting best practices.
+        Recommendations:
+        - Suggest specific actions to enhance code quality.
+        - Provide guidance on writing clear and informative commit messages.
+        - Offer advice on adopting best practices.
 
-Note: The ratings should reflect the overall code quality and commit message quality, and the summary should offer constructive feedback for improvement.
-Special note: Please do not include or print any code file or code in the output.
-"""
-
+        Note: The ratings should reflect the overall code quality and commit message quality, and the summary should offer constructive feedback for improvement.
+        Special note: Please do not include or print any code file or code in the output.
+        """
+    # star_template = PromptTemplate(template=prompt, input_variables=['filename', 'code_content', 'commit_message'])
     prompt = prompt.format(code=code_content, filename=filename, commit_message=commit_message)
     response = llm_g.invoke(prompt)
     return response.content
